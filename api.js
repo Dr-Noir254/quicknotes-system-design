@@ -48,7 +48,13 @@ function createNoteElement(note) {
   const body = document.createElement("p");
   body.textContent = note.body;
 
-  li.append(title, body);
+  const deleteBtn = document.createElement("button");
+  deleteBtn.type = "button";
+  deleteBtn.className = "delete-btn";
+  deleteBtn.textContent = "Delete";
+  deleteBtn.addEventListener("click", () => deleteNote(note.id, li));
+
+  li.append(title, body, deleteBtn);
   return li;
 }
 
@@ -76,6 +82,30 @@ async function loadNotes() {
   } catch (error) {
     console.error(error);
     setStatus("Sorry, we could not load your notes. Please check your connection and try again.", "error");
+  } finally {
+    setBusy(false);
+  }
+}
+
+// ---------- DELETE: remove a note ----------
+// NOTE ON JSONPLACEHOLDER: it is a fake API. It accepts POST and DELETE and
+// answers with a success status, but it never stores or removes anything.
+// Our approach: we treat a successful (2xx) DELETE response as the server's
+// confirmation and remove the note from the page only after that response
+// arrives (not before). Because nothing is really deleted, clicking "Load notes"
+// again brings the original 10 notes back, and a note we created (id 101) cannot
+// be found on the server later. A real QuickNotes API would persist the change.
+async function deleteNote(id, listItem) {
+  setStatus(`Deleting note ${id}...`, "loading");
+  setBusy(true);
+  try {
+    const { status } = await request(`${API_URL}/${id}`, { method: "DELETE" });
+    listItem.remove();
+    if (listEl.children.length === 0) showEmptyState();
+    setStatus(`Note ${id} deleted (status ${status}).`, "success");
+  } catch (error) {
+    console.error(error);
+    setStatus(`Sorry, we could not delete note ${id}. Please try again.`, "error");
   } finally {
     setBusy(false);
   }
